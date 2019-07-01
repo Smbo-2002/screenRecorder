@@ -1,0 +1,14 @@
+{
+	"manifest_version": 2,
+	"name": "My Cool Extension",
+	"version": "1.0",
+	"permissions": ["storage", "desktopCapture", "tabCapture"],
+	"background": {
+		"scripts": ["background.js"],
+		"persistent": false
+	},
+	"browser_action": {
+		"default_popup": "popup.html",
+		"default_title" : "Click TAB or Screen to start recording | Click STOP or close the tab to end recording"
+	}
+}

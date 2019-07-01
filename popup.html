@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+        body {
+            padding: 15px;
+            width: 200px;
+            text-align: center;
+        }
+
+        h1 {
+            margin: 0 0 10px 0;
+        }
+
+        button {
+            margin-bottom: 25px;
+            background: #ffffff;
+            border-radius: 4px;
+            padding: 10px;
+            cursor: pointer;
+        }
+        #navigation {
+            display: none;
+        }
+        #navigation button {
+            border: 2px solid #25d66b;
+        }
+
+        #tab {
+            float: left;
+        }
+        #screen {
+            float: right;
+        }
+
+        #navigation span {
+            vertical-align: -webkit-baseline-middle;
+        }
+
+        #stop-nav {
+            display: none;
+        }
+        p {
+            text-align: center;
+        }
+        #stop {
+            border: 2px solid #fc2348;
+        }
+    </style>
+  </head>
+  <body>
+    <h1>Record</h1>
+    <div id="navigation">
+        <button id="tab">Tab</button>
+        <span>or</span>
+        <button id="screen">Screen</button>
+    </div>
+    <div id="stop-nav">
+        <p id="time">0 sec</p>
+        <button id="stop">Stop</button>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>
