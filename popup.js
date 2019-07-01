@@ -30,6 +30,10 @@ screen.onclick = function (element) {
     start('screen');
 }
 
+stop.onclick = function (element) {
+    stopRecording();
+}
+
 chrome.runtime.onMessage.addListener(
     function (request, sender, sendResponse) {
         if (request.time) {
@@ -37,6 +41,7 @@ chrome.runtime.onMessage.addListener(
         }
     }
 );
+
 
 function start(type) {
     if (!recording) {
@@ -48,6 +53,20 @@ function start(type) {
         // Send event to background.js
         chrome.runtime.sendMessage({
             start: type
+        });
+    }
+}
+
+function stopRecording () {
+    if (recording) {
+        recording = false;
+        // Change styles
+        navigation.style.display = 'block';
+        stopNav.style.display = 'none';
+
+        // Send event to background.js
+        chrome.runtime.sendMessage({
+            stop: true
         });
     }
 }
