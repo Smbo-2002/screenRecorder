@@ -1,34 +1,31 @@
-var second = 0;
+var seconds = 0;
 var recording = false;
 var track = null;
+var cancelId = null;
+var interval;
 
 chrome.runtime.onMessage.addListener(
 	function (request, sender, sendResponse) {
-		console.log(recording);
 		// Start recording
 		if (request.start == 'screen') {
-			recording = true;
-			setInterval(function () {
-				addTime(request);
-			}, 1000);
-			chrome.desktopCapture.chooseDesktopMedia(["screen"], function (id) {
-				accessToRecord(id, 'screen')
+			cancelId = chrome.desktopCapture.chooseDesktopMedia(["screen"], function (id) {
+				if (id) {
+					accessToRecord(id, 'screen', request);
+				}
 			});
 		} else if (request.start == 'tab') {
-			recording = true;
-			setInterval(function () {
-				addTime(request);
-			}, 1000);
-			chrome.desktopCapture.chooseDesktopMedia(["tab"], function (id) {
-				accessToRecord(id, 'desktop')
+			cancelId = chrome.desktopCapture.chooseDesktopMedia(["tab"], function (id) {
+				if (id) {
+					accessToRecord(id, 'desktop', request);
+				}
 			});
 		}
 
-		// Getter for second and recording
+		// Getter for seconds and recording
 
-		if (request.get == 'second') {
+		if (request.get == 'seconds') {
 			sendResponse({
-				second: second
+				seconds: seconds
 			});
 		} else if (request.get == 'recording') {
 			sendResponse({
@@ -40,20 +37,24 @@ chrome.runtime.onMessage.addListener(
 
 function addTime(request) {
 	chrome.runtime.sendMessage(request.id, {
-		time: ++second
+		time: ++seconds
 	});
 }
 
-function accessToRecord(id, type) {
+function accessToRecord(id, type, request) {
 	navigator.mediaDevices.getUserMedia({
 		audio: false,
 		video: {
 			mandatory: {
-				chromeMediaSource: type, // The media source must be 'tab' here.
+				chromeMediaSource: type,
 				chromeMediaSourceId: id
 			}
 		}
 	}).then(function (mediaStreamObj) {
+		interval = setInterval(function () {
+			addTime(request);
+		}, 1000);
+		recording = true;
 		playCapturedStream(mediaStreamObj);
 	}).catch(function (err) {
 		console.log(err);
@@ -61,34 +62,52 @@ function accessToRecord(id, type) {
 }
 
 function playCapturedStream(stream) {
-	console.log('mi bna ka!');
 	track = new MediaRecorder(stream);
+
 	var chunks = [];
+	
+	var blob = null;
+	var videoURL = null;
+
 	track.start();
-	var blob;
-	var videoURL;
 
 	chrome.runtime.onMessage.addListener(
 		function (request, sender, sendResponse) {
 			if (request.stop) {
+				stream.getTracks().forEach(element => {
+					element.stop();
+				});
 				track.stop();
-
-				var newPlayer = window.open('receiver.html');
-				newPlayer.onload = function () {
-					var receiver = newPlayer.document.getElementById('mainScreen');
-					videoURL = newPlayer.URL.createObjectURL(blob);
-					receiver.src = videoURL;
-				}
+				chrome.desktopCapture.cancelChooseDesktopMedia(cancelId);
 			}
 		}
-	);
+		);
 
-	track.ondataavailable = function (ev) {
-		chunks.push(ev.data);
-	}
-
-	track.onstop = function (ev) {
-		blob = new Blob(chunks, { 'type' : 'video/mp4;' });
-		chunks = [];
+		stream.getVideoTracks()[0].onended = function () {
+			stream.getTracks().forEach(element => {
+				element.stop();
+			});
+			track.stop();
+			chrome.desktopCapture.cancelChooseDesktopMedia(cancelId);
+		};
+		
+		track.ondataavailable = function (ev) {
+			chunks.push(ev.data);
+		}
+		
+		track.onstop = function (ev) {
+			var newPlayer = window.open('receiver.html');
+			blob = new Blob(chunks, {
+				'type': 'video/mp4;'
+			});
+			chunks = [];
+			newPlayer.onload = function () {
+				var receiver = newPlayer.document.getElementById('mainScreen');
+				videoURL = newPlayer.URL.createObjectURL(blob);
+				receiver.src = videoURL;
+			}
+			recording = false;
+			seconds = 0;
+			clearInterval(interval);
 	}
 }

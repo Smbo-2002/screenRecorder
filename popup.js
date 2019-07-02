@@ -10,7 +10,6 @@ var recording, time;
 chrome.runtime.sendMessage({
     get: 'recording'
 }, function (response) {
-    console.log(response);
     if (response.recording) {
         recording = response.recording;
         stopNav.style.display = 'block';
