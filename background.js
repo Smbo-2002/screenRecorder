@@ -14,10 +14,15 @@ chrome.runtime.onMessage.addListener(
 				}
 			});
 		} else if (request.start == 'tab') {
-			cancelId = chrome.desktopCapture.chooseDesktopMedia(["tab"], function (id) {
-				if (id) {
-					accessToRecord(id, 'desktop', request);
-				}
+			chrome.tabCapture.capture({
+				video: true,
+				audio: false
+			}, function (stream) {
+				interval = setInterval(function () {
+					addTime(request);
+				}, 1000);
+				recording = true;
+				playCapturedStream(stream);
 			});
 		}
 
@@ -65,7 +70,7 @@ function playCapturedStream(stream) {
 	track = new MediaRecorder(stream);
 
 	var chunks = [];
-	
+
 	var blob = null;
 	var videoURL = null;
 
@@ -77,37 +82,38 @@ function playCapturedStream(stream) {
 				stream.getTracks().forEach(element => {
 					element.stop();
 				});
-				track.stop();
-				chrome.desktopCapture.cancelChooseDesktopMedia(cancelId);
+				if(track.state != 'inactive') {
+					console.log(track);
+					track.stop();
+				}
 			}
 		}
-		);
+	);
 
-		stream.getVideoTracks()[0].onended = function () {
-			stream.getTracks().forEach(element => {
-				element.stop();
-			});
-			track.stop();
-			chrome.desktopCapture.cancelChooseDesktopMedia(cancelId);
-		};
-		
-		track.ondataavailable = function (ev) {
-			chunks.push(ev.data);
+	stream.getVideoTracks()[0].onended = function () {
+		stream.getTracks().forEach(element => {
+			element.stop();
+		});
+		track.stop();
+	};
+
+	track.ondataavailable = function (ev) {
+		chunks.push(ev.data);
+	}
+
+	track.onstop = function (ev) {
+		var newPlayer = window.open('receiver.html');
+		blob = new Blob(chunks, {
+			'type': 'video/mp4;'
+		});
+		chunks = [];
+		newPlayer.onload = function () {
+			var receiver = newPlayer.document.getElementById('mainScreen');
+			videoURL = newPlayer.URL.createObjectURL(blob);
+			receiver.src = videoURL;
 		}
-		
-		track.onstop = function (ev) {
-			var newPlayer = window.open('receiver.html');
-			blob = new Blob(chunks, {
-				'type': 'video/mp4;'
-			});
-			chunks = [];
-			newPlayer.onload = function () {
-				var receiver = newPlayer.document.getElementById('mainScreen');
-				videoURL = newPlayer.URL.createObjectURL(blob);
-				receiver.src = videoURL;
-			}
-			recording = false;
-			seconds = 0;
-			clearInterval(interval);
+		recording = false;
+		seconds = 0;
+		clearInterval(interval);
 	}
 }
